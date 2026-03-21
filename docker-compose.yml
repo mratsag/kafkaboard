@@ -33,10 +33,10 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://aws-1-eu-west-1.pooler.supabase.com:6543/postgres?preferQueryMode=simple}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres.jwtucgtlouqpgvgexrsh}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SPRING_FLYWAY_URL: ${SPRING_FLYWAY_URL:-${SPRING_DATASOURCE_URL}}
+      SPRING_FLYWAY_URL: ${SPRING_FLYWAY_URL:-jdbc:postgresql://aws-1-eu-west-1.pooler.supabase.com:6543/postgres?preferQueryMode=simple}
       SPRING_FLYWAY_USER: ${SPRING_FLYWAY_USER:-${SPRING_DATASOURCE_USERNAME:-postgres.jwtucgtlouqpgvgexrsh}}
       SPRING_FLYWAY_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
