@@ -1,11 +1,8 @@
 package com.muratsag.kafkaboard.auth.dto;
 
-import lombok.Builder;
 import lombok.Data;
 
 @Data
-@Builder
-public class AuthResponse {
-    private String token;
+public class RefreshTokenRequest {
     private String refreshToken;
 }

@@ -2,6 +2,7 @@ package com.muratsag.kafkaboard.auth;
 
 import com.muratsag.kafkaboard.auth.dto.AuthResponse;
 import com.muratsag.kafkaboard.auth.dto.LoginRequest;
+import com.muratsag.kafkaboard.auth.dto.RefreshTokenRequest;
 import com.muratsag.kafkaboard.auth.dto.RegisterRequest;
 import com.muratsag.kafkaboard.exception.ConflictException;
 import com.muratsag.kafkaboard.user.UserEntity;
@@ -18,6 +19,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthResponse register(RegisterRequest request) {
         validateCredentials(request.getEmail(), request.getPassword());
@@ -34,9 +36,7 @@ public class AuthService {
                         .build()
         );
 
-        return AuthResponse.builder()
-                .token(jwtService.generateToken(toAuthenticatedUser(user)))
-                .build();
+        return buildAuthResponse(user);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -50,9 +50,19 @@ public class AuthService {
             throw new BadCredentialsException("Email veya şifre hatalı");
         }
 
+        return buildAuthResponse(user);
+    }
+
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        RefreshTokenEntity refreshToken = refreshTokenService.validateRefreshToken(request.getRefreshToken());
+
         return AuthResponse.builder()
-                .token(jwtService.generateToken(toAuthenticatedUser(user)))
+                .token(jwtService.generateToken(toAuthenticatedUser(refreshToken.getUser())))
                 .build();
+    }
+
+    public void logout(RefreshTokenRequest request) {
+        refreshTokenService.revokeRefreshToken(request.getRefreshToken());
     }
 
     private void validateCredentials(String email, String password) {
@@ -69,6 +79,13 @@ public class AuthService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .passwordHash(user.getPasswordHash())
+                .build();
+    }
+
+    private AuthResponse buildAuthResponse(UserEntity user) {
+        return AuthResponse.builder()
+                .token(jwtService.generateToken(toAuthenticatedUser(user)))
+                .refreshToken(refreshTokenService.generateRefreshToken(user))
                 .build();
     }
 }
