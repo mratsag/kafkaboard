@@ -2,8 +2,10 @@ package com.muratsag.kafkaboard.controller;
 
 import com.muratsag.kafkaboard.dto.ConsumerGroupInfoDto;
 import com.muratsag.kafkaboard.dto.CreateTopicRequest;
+import com.muratsag.kafkaboard.dto.TopicMessageDto;
 import com.muratsag.kafkaboard.dto.TopicInfoDto;
 import com.muratsag.kafkaboard.service.KafkaConsumerGroupService;
+import com.muratsag.kafkaboard.service.KafkaTopicMessageService;
 import com.muratsag.kafkaboard.service.KafkaTopicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ public class ClusterController {
 
     private final KafkaTopicService kafkaTopicService;
     private final KafkaConsumerGroupService kafkaConsumerGroupService;
+    private final KafkaTopicMessageService kafkaTopicMessageService;
 
     @GetMapping("/topics")
     public List<TopicInfoDto> getTopics(@RequestParam String bootstrapServers) {
@@ -42,6 +45,14 @@ public class ClusterController {
             @PathVariable String topicName) {
         kafkaTopicService.deleteTopic(bootstrapServers, topicName);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/topics/{topicName}/messages")
+    public List<TopicMessageDto> getTopicMessages(
+            @RequestParam String bootstrapServers,
+            @RequestParam(defaultValue = "10") int limit,
+            @PathVariable String topicName) {
+        return kafkaTopicMessageService.getLatestMessages(bootstrapServers, topicName, limit);
     }
 
     @GetMapping("/consumer-groups")
