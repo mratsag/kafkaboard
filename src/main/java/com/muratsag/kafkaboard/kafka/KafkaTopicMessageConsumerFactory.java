@@ -1,4 +1,4 @@
-package com.muratsag.kafkaboard.service;
+package com.muratsag.kafkaboard.kafka;
 
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
 import org.apache.kafka.clients.consumer.ConsumerConfig;

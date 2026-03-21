@@ -1,4 +1,4 @@
-package com.muratsag.kafkaboard.service;
+package com.muratsag.kafkaboard.kafka;
 
 import com.muratsag.kafkaboard.dto.TopicMessageDto;
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
@@ -77,9 +77,7 @@ public class KafkaTopicMessageService {
             throw e;
         } catch (Exception e) {
             adminClientFactory.invalidate(bootstrapServers);
-            throw new ClusterConnectionException(
-                    "Topic mesajları alınamadı: " + topicName + " — " + e.getMessage()
-            );
+            throw new ClusterConnectionException("Topic mesajları alınamadı: " + topicName + " — " + e.getMessage());
         }
     }
 
@@ -94,16 +92,12 @@ public class KafkaTopicMessageService {
             }
 
             adminClientFactory.invalidate(bootstrapServers);
-            throw new ClusterConnectionException(
-                    "Topic mesajları alınamadı: " + topicName + " — " + e.getMessage()
-            );
+            throw new ClusterConnectionException("Topic mesajları alınamadı: " + topicName + " — " + e.getMessage());
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
             adminClientFactory.invalidate(bootstrapServers);
-            throw new ClusterConnectionException(
-                    "Topic mesajları alınamadı: " + topicName + " — " + e.getMessage()
-            );
+            throw new ClusterConnectionException("Topic mesajları alınamadı: " + topicName + " — " + e.getMessage());
         }
     }
 

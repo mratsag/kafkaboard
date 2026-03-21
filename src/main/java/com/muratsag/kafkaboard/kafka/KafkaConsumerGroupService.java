@@ -1,10 +1,14 @@
-package com.muratsag.kafkaboard.service;
+package com.muratsag.kafkaboard.kafka;
 
 import com.muratsag.kafkaboard.dto.ConsumerGroupInfoDto;
 import com.muratsag.kafkaboard.dto.PartitionLagDto;
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.ConsumerGroupDescription;
+import org.apache.kafka.clients.admin.ConsumerGroupListing;
+import org.apache.kafka.clients.admin.ListConsumerGroupOffsetsResult;
+import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.stereotype.Service;
@@ -23,11 +27,9 @@ public class KafkaConsumerGroupService {
     private final KafkaAdminClientFactory adminClientFactory;
 
     public List<ConsumerGroupInfoDto> getConsumerGroupLag(String bootstrapServers) {
-
         try {
             AdminClient adminClient = adminClientFactory.create(bootstrapServers);
 
-            // 1. Tüm consumer group ID'lerini getir
             List<String> groupIds = adminClient
                     .listConsumerGroups()
                     .all()
@@ -36,61 +38,53 @@ public class KafkaConsumerGroupService {
                     .map(ConsumerGroupListing::groupId)
                     .toList();
 
-            if (groupIds.isEmpty()) return List.of();
+            if (groupIds.isEmpty()) {
+                return List.of();
+            }
 
-            // 2. Her group'un detayını getir
             Map<String, ConsumerGroupDescription> groupDescriptions = adminClient
                     .describeConsumerGroups(groupIds)
                     .all()
                     .get(5, TimeUnit.SECONDS);
 
-            // 3. Her group'un committed offset'lerini getir
             Map<String, ListConsumerGroupOffsetsResult> offsetResults = new HashMap<>();
             for (String groupId : groupIds) {
                 offsetResults.put(groupId, adminClient.listConsumerGroupOffsets(groupId));
             }
 
-            // 4. Her group için lag hesapla
             List<ConsumerGroupInfoDto> result = new ArrayList<>();
 
             for (String groupId : groupIds) {
-
                 Map<TopicPartition, OffsetAndMetadata> committedOffsets = offsetResults
                         .get(groupId)
                         .partitionsToOffsetAndMetadata()
                         .get(5, TimeUnit.SECONDS);
 
-                if (committedOffsets.isEmpty()) continue;
+                if (committedOffsets.isEmpty()) {
+                    continue;
+                }
 
-                // 5. End offset'leri getir
                 Map<TopicPartition, Long> endOffsets = adminClient
                         .listOffsets(committedOffsets.keySet().stream()
-                                .collect(Collectors.toMap(
-                                        tp -> tp,
-                                        tp -> OffsetSpec.latest()
-                                )))
+                                .collect(Collectors.toMap(tp -> tp, tp -> OffsetSpec.latest())))
                         .all()
                         .get(5, TimeUnit.SECONDS)
                         .entrySet().stream()
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                e -> e.getValue().offset()
-                        ));
+                        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().offset()));
 
-                // 6. Partition bazında lag hesapla
                 List<PartitionLagDto> partitionLags = new ArrayList<>();
                 long totalLag = 0;
 
                 for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : committedOffsets.entrySet()) {
-                    TopicPartition tp = entry.getKey();
+                    TopicPartition topicPartition = entry.getKey();
                     long committed = entry.getValue().offset();
-                    long end = endOffsets.getOrDefault(tp, committed);
+                    long end = endOffsets.getOrDefault(topicPartition, committed);
                     long lag = Math.max(0, end - committed);
                     totalLag += lag;
 
                     partitionLags.add(PartitionLagDto.builder()
-                            .topic(tp.topic())
-                            .partition(tp.partition())
+                            .topic(topicPartition.topic())
+                            .partition(topicPartition.partition())
                             .currentOffset(committed)
                             .endOffset(end)
                             .lag(lag)
@@ -112,9 +106,7 @@ public class KafkaConsumerGroupService {
             throw e;
         } catch (Exception e) {
             adminClientFactory.invalidate(bootstrapServers);
-            throw new ClusterConnectionException(
-                "Consumer group bilgisi alınamadı — " + e.getMessage()
-            );
+            throw new ClusterConnectionException("Consumer group bilgisi alınamadı — " + e.getMessage());
         }
     }
 }

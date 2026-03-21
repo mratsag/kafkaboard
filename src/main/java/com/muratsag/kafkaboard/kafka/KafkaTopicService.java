@@ -1,4 +1,4 @@
-package com.muratsag.kafkaboard.service;
+package com.muratsag.kafkaboard.kafka;
 
 import com.muratsag.kafkaboard.dto.TopicInfoDto;
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
@@ -32,7 +32,9 @@ public class KafkaTopicService {
                     .names()
                     .get(5, TimeUnit.SECONDS);
 
-            if (topicNames.isEmpty()) return List.of();
+            if (topicNames.isEmpty()) {
+                return List.of();
+            }
 
             Map<String, TopicDescription> descriptions = adminClient
                     .describeTopics(topicNames)
@@ -43,26 +45,28 @@ public class KafkaTopicService {
                     .map(desc -> TopicInfoDto.builder()
                             .name(desc.name())
                             .partitionCount(desc.partitions().size())
-                            .replicationFactor((short) desc.partitions().get(0).replicas().size())
+                            .replicationFactor(desc.partitions().getFirst().replicas().size())
                             .build())
                     .toList();
 
         } catch (ClusterConnectionException e) {
             throw e;
         } catch (Exception e) {
-            adminClientFactory.invalidate(bootstrapServers); // bozuk bağlantıyı temizle
+            adminClientFactory.invalidate(bootstrapServers);
             throw new ClusterConnectionException("Topic listesi alınamadı — " + e.getMessage());
         }
     }
 
-    public TopicInfoDto createTopic(String bootstrapServers, String topicName,
-                                     int partitions, short replicationFactor) {
-        if (topicName == null || topicName.isBlank())
+    public TopicInfoDto createTopic(String bootstrapServers, String topicName, int partitions, short replicationFactor) {
+        if (topicName == null || topicName.isBlank()) {
             throw new IllegalArgumentException("Topic adı boş olamaz");
-        if (partitions < 1)
+        }
+        if (partitions < 1) {
             throw new IllegalArgumentException("Partition sayısı en az 1 olmalı");
-        if (replicationFactor < 1)
+        }
+        if (replicationFactor < 1) {
             throw new IllegalArgumentException("Replication factor en az 1 olmalı");
+        }
 
         try {
             AdminClient adminClient = adminClientFactory.create(bootstrapServers);
@@ -84,8 +88,9 @@ public class KafkaTopicService {
     }
 
     public void deleteTopic(String bootstrapServers, String topicName) {
-        if (topicName == null || topicName.isBlank())
+        if (topicName == null || topicName.isBlank()) {
             throw new IllegalArgumentException("Topic adı boş olamaz");
+        }
 
         try {
             AdminClient adminClient = adminClientFactory.create(bootstrapServers);

@@ -1,4 +1,4 @@
-package com.muratsag.kafkaboard.service;
+package com.muratsag.kafkaboard.kafka;
 
 import com.muratsag.kafkaboard.dto.ClusterHealthDto;
 import com.muratsag.kafkaboard.dto.ClusterHealthStatus;
@@ -30,14 +30,9 @@ public class KafkaClusterHealthService {
             AdminClient adminClient = adminClientFactory.create(bootstrapServers);
             DescribeClusterResult clusterResult = adminClient.describeCluster();
 
-            String clusterId = normalizeClusterId(clusterResult
-                    .clusterId()
-                    .get(5, TimeUnit.SECONDS));
+            String clusterId = normalizeClusterId(clusterResult.clusterId().get(5, TimeUnit.SECONDS));
 
-            List<NodeInfoDto> nodes = clusterResult
-                    .nodes()
-                    .get(5, TimeUnit.SECONDS)
-                    .stream()
+            List<NodeInfoDto> nodes = clusterResult.nodes().get(5, TimeUnit.SECONDS).stream()
                     .map(this::toNodeInfoDto)
                     .toList();
 

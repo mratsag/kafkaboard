@@ -1,4 +1,4 @@
-package com.muratsag.kafkaboard.service;
+package com.muratsag.kafkaboard.kafka;
 
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
 import jakarta.annotation.PreDestroy;
@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class KafkaAdminClientFactory {
 
-    // bootstrapServers → AdminClient cache
     private final ConcurrentHashMap<String, AdminClient> clientCache = new ConcurrentHashMap<>();
 
     public AdminClient create(String bootstrapServers) {
@@ -21,7 +20,6 @@ public class KafkaAdminClientFactory {
             throw new IllegalArgumentException("Bootstrap server adresi boş olamaz");
         }
 
-        // Cache'de varsa direkt dön — yoksa yarat ve cache'e ekle
         return clientCache.computeIfAbsent(bootstrapServers, this::createNewClient);
     }
 
@@ -32,28 +30,23 @@ public class KafkaAdminClientFactory {
         config.put(AdminClientConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, 5000);
 
         try {
-            System.out.println("Yeni AdminClient oluşturuluyor: " + bootstrapServers);
             return AdminClient.create(config);
         } catch (Exception e) {
             throw new ClusterConnectionException(
-                "Kafka cluster'ına bağlanılamadı: " + bootstrapServers + " — " + e.getMessage()
+                    "Kafka cluster'ına bağlanılamadı: " + bootstrapServers + " — " + e.getMessage()
             );
         }
     }
 
-    // Bağlantı bozulursa cache'den temizle
     public void invalidate(String bootstrapServers) {
         AdminClient client = clientCache.remove(bootstrapServers);
         if (client != null) {
             client.close();
-            System.out.println("AdminClient kapatıldı: " + bootstrapServers);
         }
     }
 
-    // Uygulama kapanırken tüm bağlantıları kapat
     @PreDestroy
     public void closeAll() {
-        System.out.println("Tüm AdminClient'lar kapatılıyor...");
         clientCache.values().forEach(AdminClient::close);
         clientCache.clear();
     }
