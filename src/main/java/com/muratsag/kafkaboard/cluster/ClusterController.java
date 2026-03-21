@@ -3,7 +3,10 @@ package com.muratsag.kafkaboard.cluster;
 import com.muratsag.kafkaboard.auth.AuthenticatedUser;
 import com.muratsag.kafkaboard.cluster.dto.ClusterDto;
 import com.muratsag.kafkaboard.cluster.dto.CreateClusterRequest;
+import com.muratsag.kafkaboard.cluster.dto.TestClusterConnectionRequest;
+import com.muratsag.kafkaboard.cluster.dto.TestClusterConnectionResponse;
 import com.muratsag.kafkaboard.dto.ClusterHealthDto;
+import com.muratsag.kafkaboard.dto.ClusterHealthStatus;
 import com.muratsag.kafkaboard.dto.ConsumerGroupInfoDto;
 import com.muratsag.kafkaboard.dto.CreateTopicRequest;
 import com.muratsag.kafkaboard.dto.TopicInfoDto;
@@ -39,6 +42,27 @@ public class ClusterController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(clusterService.createCluster(user.getId(), request));
+    }
+
+    @PostMapping("/test-connection")
+    public TestClusterConnectionResponse testConnection(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestBody TestClusterConnectionRequest request
+    ) {
+        ClusterHealthDto health = kafkaClusterHealthService.getClusterHealth(request.getBootstrapServers());
+
+        if (health.getStatus() == ClusterHealthStatus.UNHEALTHY) {
+            return TestClusterConnectionResponse.builder()
+                    .status(ClusterHealthStatus.UNHEALTHY)
+                    .error(kafkaClusterHealthService.getConnectionError(request.getBootstrapServers()))
+                    .build();
+        }
+
+        return TestClusterConnectionResponse.builder()
+                .status(health.getStatus())
+                .nodeCount(health.getNodeCount())
+                .clusterId(health.getClusterId())
+                .build();
     }
 
     @GetMapping

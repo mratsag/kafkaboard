@@ -21,6 +21,23 @@ public class KafkaClusterHealthService {
 
     private final KafkaAdminClientFactory adminClientFactory;
 
+    public String getConnectionError(String bootstrapServers) {
+        if (bootstrapServers == null || bootstrapServers.isBlank()) {
+            throw new IllegalArgumentException("Bootstrap server adresi boş olamaz");
+        }
+
+        try {
+            AdminClient adminClient = adminClientFactory.create(bootstrapServers);
+            DescribeClusterResult clusterResult = adminClient.describeCluster();
+            clusterResult.clusterId().get(5, TimeUnit.SECONDS);
+            clusterResult.nodes().get(5, TimeUnit.SECONDS);
+            return null;
+        } catch (Exception e) {
+            adminClientFactory.invalidate(bootstrapServers);
+            return e.getMessage();
+        }
+    }
+
     public ClusterHealthDto getClusterHealth(String bootstrapServers) {
         if (bootstrapServers == null || bootstrapServers.isBlank()) {
             throw new IllegalArgumentException("Bootstrap server adresi boş olamaz");
