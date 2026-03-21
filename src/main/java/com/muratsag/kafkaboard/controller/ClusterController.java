@@ -1,9 +1,11 @@
 package com.muratsag.kafkaboard.controller;
 
 import com.muratsag.kafkaboard.dto.ConsumerGroupInfoDto;
+import com.muratsag.kafkaboard.dto.ClusterHealthDto;
 import com.muratsag.kafkaboard.dto.CreateTopicRequest;
 import com.muratsag.kafkaboard.dto.TopicMessageDto;
 import com.muratsag.kafkaboard.dto.TopicInfoDto;
+import com.muratsag.kafkaboard.service.KafkaClusterHealthService;
 import com.muratsag.kafkaboard.service.KafkaConsumerGroupService;
 import com.muratsag.kafkaboard.service.KafkaTopicMessageService;
 import com.muratsag.kafkaboard.service.KafkaTopicService;
@@ -22,6 +24,12 @@ public class ClusterController {
     private final KafkaTopicService kafkaTopicService;
     private final KafkaConsumerGroupService kafkaConsumerGroupService;
     private final KafkaTopicMessageService kafkaTopicMessageService;
+    private final KafkaClusterHealthService kafkaClusterHealthService;
+
+    @GetMapping("/health")
+    public ClusterHealthDto getClusterHealth(@RequestParam String bootstrapServers) {
+        return kafkaClusterHealthService.getClusterHealth(bootstrapServers);
+    }
 
     @GetMapping("/topics")
     public List<TopicInfoDto> getTopics(@RequestParam String bootstrapServers) {

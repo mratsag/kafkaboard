@@ -24,7 +24,8 @@ public class KafkaConsumerGroupService {
 
     public List<ConsumerGroupInfoDto> getConsumerGroupLag(String bootstrapServers) {
 
-        try (AdminClient adminClient = adminClientFactory.create(bootstrapServers)) {
+        try {
+            AdminClient adminClient = adminClientFactory.create(bootstrapServers);
 
             // 1. Tüm consumer group ID'lerini getir
             List<String> groupIds = adminClient
@@ -107,8 +108,10 @@ public class KafkaConsumerGroupService {
             return result;
 
         } catch (ClusterConnectionException e) {
+            adminClientFactory.invalidate(bootstrapServers);
             throw e;
         } catch (Exception e) {
+            adminClientFactory.invalidate(bootstrapServers);
             throw new ClusterConnectionException(
                 "Consumer group bilgisi alınamadı — " + e.getMessage()
             );
