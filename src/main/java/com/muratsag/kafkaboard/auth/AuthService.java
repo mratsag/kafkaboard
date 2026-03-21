@@ -33,6 +33,7 @@ public class AuthService {
                 UserEntity.builder()
                         .email(normalizedEmail)
                         .passwordHash(passwordEncoder.encode(request.getPassword()))
+                        .avatarColor(generateAvatarColor(normalizedEmail))
                         .build()
         );
 
@@ -87,5 +88,21 @@ public class AuthService {
                 .token(jwtService.generateToken(toAuthenticatedUser(user)))
                 .refreshToken(refreshTokenService.generateRefreshToken(user))
                 .build();
+    }
+
+    private String generateAvatarColor(String seed) {
+        String[] palette = {
+                "#6366f1",
+                "#8b5cf6",
+                "#ec4899",
+                "#f97316",
+                "#14b8a6",
+                "#0ea5e9",
+                "#22c55e",
+                "#eab308"
+        };
+
+        int index = Math.abs(seed.hashCode()) % palette.length;
+        return palette[index];
     }
 }

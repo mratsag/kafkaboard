@@ -10,4 +10,8 @@ public interface ClusterRepository extends JpaRepository<ClusterEntity, UUID> {
     List<ClusterEntity> findAllByUser_IdOrderByCreatedAtDesc(UUID userId);
 
     Optional<ClusterEntity> findByIdAndUser_Id(UUID id, UUID userId);
+
+    long countByUser_Id(UUID userId);
+
+    void deleteAllByUser_Id(UUID userId);
 }

@@ -26,6 +26,12 @@ public class UserEntity {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
+    @Column(name = "avatar_color", nullable = false, length = 7)
+    private String avatarColor;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

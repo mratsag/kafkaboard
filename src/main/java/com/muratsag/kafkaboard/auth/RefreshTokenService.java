@@ -60,6 +60,11 @@ public class RefreshTokenService {
         refreshTokenRepository.deleteByToken(token);
     }
 
+    @Transactional
+    public void revokeAllForUser(UUID userId) {
+        refreshTokenRepository.deleteAllByUser_Id(userId);
+    }
+
     @Scheduled(fixedDelay = 86400000)
     @Transactional
     public void cleanupExpiredTokens() {
