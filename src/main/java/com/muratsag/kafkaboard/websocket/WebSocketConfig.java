@@ -41,7 +41,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(lagWebSocketHandler, "/ws/clusters/{clusterId}/lag")
                 .addInterceptors(new JwtClusterHandshakeInterceptor())
-                .setAllowedOrigins("http://localhost:5173");
+                .setAllowedOriginPatterns(
+                        "http://localhost:5173",
+                        "https://*.vercel.app",
+                        "https://muratsag.online"
+                );
     }
 
     private final class JwtClusterHandshakeInterceptor implements HandshakeInterceptor {
