@@ -1,5 +1,6 @@
 package com.muratsag.kafkaboard.kafka;
 
+import com.muratsag.kafkaboard.cluster.ClusterEntity;
 import com.muratsag.kafkaboard.dto.ConsumerGroupInfoDto;
 import com.muratsag.kafkaboard.dto.PartitionLagDto;
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
@@ -26,9 +27,9 @@ public class KafkaConsumerGroupService {
 
     private final KafkaAdminClientFactory adminClientFactory;
 
-    public List<ConsumerGroupInfoDto> getConsumerGroupLag(String bootstrapServers) {
+    public List<ConsumerGroupInfoDto> getConsumerGroupLag(ClusterEntity cluster) {
         try {
-            AdminClient adminClient = adminClientFactory.create(bootstrapServers);
+            AdminClient adminClient = adminClientFactory.create(cluster);
 
             List<String> groupIds = adminClient
                     .listConsumerGroups()
@@ -102,10 +103,10 @@ public class KafkaConsumerGroupService {
             return result;
 
         } catch (ClusterConnectionException e) {
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw e;
         } catch (Exception e) {
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw new ClusterConnectionException("Consumer group bilgisi alınamadı — " + e.getMessage());
         }
     }

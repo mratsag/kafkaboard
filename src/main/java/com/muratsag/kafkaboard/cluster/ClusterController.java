@@ -49,12 +49,12 @@ public class ClusterController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @RequestBody TestClusterConnectionRequest request
     ) {
-        ClusterHealthDto health = kafkaClusterHealthService.getClusterHealth(request.getBootstrapServers());
+        ClusterHealthDto health = kafkaClusterHealthService.testConnection(request);
 
         if (health.getStatus() == ClusterHealthStatus.UNHEALTHY) {
             return TestClusterConnectionResponse.builder()
                     .status(ClusterHealthStatus.UNHEALTHY)
-                    .error(kafkaClusterHealthService.getConnectionError(request.getBootstrapServers()))
+                    .error(kafkaClusterHealthService.getTestConnectionError(request))
                     .build();
         }
 
@@ -85,7 +85,7 @@ public class ClusterController {
             @PathVariable UUID id
     ) {
         ClusterEntity cluster = clusterService.getOwnedCluster(id, user.getId());
-        return kafkaClusterHealthService.getClusterHealth(cluster.getBootstrapServers());
+        return kafkaClusterHealthService.getClusterHealth(cluster);
     }
 
     @GetMapping("/{id}/topics")
@@ -94,7 +94,7 @@ public class ClusterController {
             @PathVariable UUID id
     ) {
         ClusterEntity cluster = clusterService.getOwnedCluster(id, user.getId());
-        return kafkaTopicService.getTopics(cluster.getBootstrapServers());
+        return kafkaTopicService.getTopics(cluster);
     }
 
     @PostMapping("/{id}/topics")
@@ -105,7 +105,7 @@ public class ClusterController {
     ) {
         ClusterEntity cluster = clusterService.getOwnedCluster(id, user.getId());
         TopicInfoDto created = kafkaTopicService.createTopic(
-                cluster.getBootstrapServers(),
+                cluster,
                 request.getTopicName(),
                 request.getPartitions(),
                 request.getReplicationFactor()
@@ -120,7 +120,7 @@ public class ClusterController {
             @PathVariable String topicName
     ) {
         ClusterEntity cluster = clusterService.getOwnedCluster(id, user.getId());
-        kafkaTopicService.deleteTopic(cluster.getBootstrapServers(), topicName);
+        kafkaTopicService.deleteTopic(cluster, topicName);
         return ResponseEntity.noContent().build();
     }
 
@@ -132,7 +132,7 @@ public class ClusterController {
             @RequestParam(defaultValue = "10") int limit
     ) {
         ClusterEntity cluster = clusterService.getOwnedCluster(id, user.getId());
-        return kafkaTopicMessageService.getLatestMessages(cluster.getBootstrapServers(), topicName, limit);
+        return kafkaTopicMessageService.getLatestMessages(cluster, topicName, limit);
     }
 
     @GetMapping("/{id}/consumer-groups")
@@ -141,6 +141,6 @@ public class ClusterController {
             @PathVariable UUID id
     ) {
         ClusterEntity cluster = clusterService.getOwnedCluster(id, user.getId());
-        return kafkaConsumerGroupService.getConsumerGroupLag(cluster.getBootstrapServers());
+        return kafkaConsumerGroupService.getConsumerGroupLag(cluster);
     }
 }

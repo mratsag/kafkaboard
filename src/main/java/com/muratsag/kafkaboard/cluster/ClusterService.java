@@ -2,6 +2,7 @@ package com.muratsag.kafkaboard.cluster;
 
 import com.muratsag.kafkaboard.cluster.dto.ClusterDto;
 import com.muratsag.kafkaboard.cluster.dto.CreateClusterRequest;
+import com.muratsag.kafkaboard.config.EncryptionService;
 import com.muratsag.kafkaboard.exception.ForbiddenException;
 import com.muratsag.kafkaboard.exception.ResourceNotFoundException;
 import com.muratsag.kafkaboard.user.UserEntity;
@@ -19,6 +20,7 @@ public class ClusterService {
 
     private final ClusterRepository clusterRepository;
     private final UserRepository userRepository;
+    private final EncryptionService encryptionService;
 
     @Transactional
     public ClusterDto createCluster(UUID userId, CreateClusterRequest request) {
@@ -32,11 +34,21 @@ public class ClusterService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
 
+        String encryptedPassword = null;
+        if (request.getSaslPassword() != null && !request.getSaslPassword().isBlank()) {
+            encryptedPassword = encryptionService.encrypt(request.getSaslPassword());
+        }
+
         ClusterEntity cluster = clusterRepository.save(
                 ClusterEntity.builder()
                         .user(user)
                         .name(request.getName().trim())
                         .bootstrapServers(request.getBootstrapServers().trim())
+                        .securityProtocol(request.getSecurityProtocol() != null
+                                ? request.getSecurityProtocol() : "PLAINTEXT")
+                        .saslMechanism(request.getSaslMechanism())
+                        .saslUsername(request.getSaslUsername())
+                        .saslPasswordEncrypted(encryptedPassword)
                         .build()
         );
 
@@ -73,6 +85,9 @@ public class ClusterService {
                 .id(cluster.getId())
                 .name(cluster.getName())
                 .bootstrapServers(cluster.getBootstrapServers())
+                .securityProtocol(cluster.getSecurityProtocol())
+                .saslMechanism(cluster.getSaslMechanism())
+                .saslUsername(cluster.getSaslUsername())
                 .createdAt(cluster.getCreatedAt())
                 .build();
     }

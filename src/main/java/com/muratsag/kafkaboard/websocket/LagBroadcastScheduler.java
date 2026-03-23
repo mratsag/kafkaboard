@@ -2,6 +2,8 @@ package com.muratsag.kafkaboard.websocket;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muratsag.kafkaboard.cluster.ClusterEntity;
+import com.muratsag.kafkaboard.cluster.ClusterRepository;
 import com.muratsag.kafkaboard.dto.ConsumerGroupInfoDto;
 import com.muratsag.kafkaboard.kafka.KafkaConsumerGroupService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -22,6 +25,7 @@ public class LagBroadcastScheduler {
 
     private final LagWebSocketHandler lagWebSocketHandler;
     private final KafkaConsumerGroupService kafkaConsumerGroupService;
+    private final ClusterRepository clusterRepository;
     private final ObjectMapper objectMapper;
 
     @Scheduled(fixedDelay = 10000)
@@ -34,24 +38,20 @@ public class LagBroadcastScheduler {
                 continue;
             }
 
-            WebSocketSession sampleSession = sessions.stream()
-                    .filter(WebSocketSession::isOpen)
-                    .findFirst()
-                    .orElse(null);
-
-            if (sampleSession == null) {
+            boolean hasOpenSession = sessions.stream().anyMatch(WebSocketSession::isOpen);
+            if (!hasOpenSession) {
                 sessions.forEach(lagWebSocketHandler::removeSession);
                 continue;
             }
 
-            String bootstrapServers = (String) sampleSession.getAttributes().get("bootstrapServers");
-            if (bootstrapServers == null || bootstrapServers.isBlank()) {
-                sendError(sessions, "Cluster bağlantı bilgisi bulunamadı");
+            Optional<ClusterEntity> clusterOpt = clusterRepository.findById(clusterId);
+            if (clusterOpt.isEmpty()) {
+                sendError(sessions, "Cluster bulunamadı: " + clusterId);
                 continue;
             }
 
             try {
-                List<ConsumerGroupInfoDto> lagData = kafkaConsumerGroupService.getConsumerGroupLag(bootstrapServers);
+                List<ConsumerGroupInfoDto> lagData = kafkaConsumerGroupService.getConsumerGroupLag(clusterOpt.get());
                 String payload = objectMapper.writeValueAsString(lagData);
                 sessions.forEach(session -> lagWebSocketHandler.sendMessage(session, payload));
             } catch (Exception e) {

@@ -6,4 +6,8 @@ import lombok.Data;
 public class CreateClusterRequest {
     private String name;
     private String bootstrapServers;
+    private String securityProtocol = "PLAINTEXT";
+    private String saslMechanism;
+    private String saslUsername;
+    private String saslPassword;
 }

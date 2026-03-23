@@ -12,5 +12,8 @@ public class ClusterDto {
     private UUID id;
     private String name;
     private String bootstrapServers;
+    private String securityProtocol;
+    private String saslMechanism;
+    private String saslUsername;
     private LocalDateTime createdAt;
 }

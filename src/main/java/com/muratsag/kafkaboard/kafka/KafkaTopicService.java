@@ -1,5 +1,6 @@
 package com.muratsag.kafkaboard.kafka;
 
+import com.muratsag.kafkaboard.cluster.ClusterEntity;
 import com.muratsag.kafkaboard.dto.TopicInfoDto;
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +21,9 @@ public class KafkaTopicService {
 
     private final KafkaAdminClientFactory adminClientFactory;
 
-    public List<TopicInfoDto> getTopics(String bootstrapServers) {
+    public List<TopicInfoDto> getTopics(ClusterEntity cluster) {
         try {
-            AdminClient adminClient = adminClientFactory.create(bootstrapServers);
+            AdminClient adminClient = adminClientFactory.create(cluster);
 
             ListTopicsOptions options = new ListTopicsOptions();
             options.listInternal(true);
@@ -52,12 +53,12 @@ public class KafkaTopicService {
         } catch (ClusterConnectionException e) {
             throw e;
         } catch (Exception e) {
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw new ClusterConnectionException("Topic listesi alınamadı — " + e.getMessage());
         }
     }
 
-    public TopicInfoDto createTopic(String bootstrapServers, String topicName, int partitions, short replicationFactor) {
+    public TopicInfoDto createTopic(ClusterEntity cluster, String topicName, int partitions, short replicationFactor) {
         if (topicName == null || topicName.isBlank()) {
             throw new IllegalArgumentException("Topic adı boş olamaz");
         }
@@ -69,7 +70,7 @@ public class KafkaTopicService {
         }
 
         try {
-            AdminClient adminClient = adminClientFactory.create(bootstrapServers);
+            AdminClient adminClient = adminClientFactory.create(cluster);
             NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
             adminClient.createTopics(List.of(newTopic)).all().get(5, TimeUnit.SECONDS);
 
@@ -82,24 +83,24 @@ public class KafkaTopicService {
         } catch (ClusterConnectionException e) {
             throw e;
         } catch (Exception e) {
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw new ClusterConnectionException("Topic oluşturulamadı: " + topicName + " — " + e.getMessage());
         }
     }
 
-    public void deleteTopic(String bootstrapServers, String topicName) {
+    public void deleteTopic(ClusterEntity cluster, String topicName) {
         if (topicName == null || topicName.isBlank()) {
             throw new IllegalArgumentException("Topic adı boş olamaz");
         }
 
         try {
-            AdminClient adminClient = adminClientFactory.create(bootstrapServers);
+            AdminClient adminClient = adminClientFactory.create(cluster);
             adminClient.deleteTopics(List.of(topicName)).all().get(5, TimeUnit.SECONDS);
 
         } catch (ClusterConnectionException e) {
             throw e;
         } catch (Exception e) {
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw new ClusterConnectionException("Topic silinemedi: " + topicName + " — " + e.getMessage());
         }
     }

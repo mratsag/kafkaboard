@@ -1,5 +1,6 @@
 package com.muratsag.kafkaboard.kafka;
 
+import com.muratsag.kafkaboard.cluster.ClusterEntity;
 import com.muratsag.kafkaboard.dto.TopicMessageDto;
 import com.muratsag.kafkaboard.exception.ClusterConnectionException;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ public class KafkaTopicMessageService {
     private final KafkaAdminClientFactory adminClientFactory;
     private final KafkaTopicMessageConsumerFactory consumerFactory;
 
-    public List<TopicMessageDto> getLatestMessages(String bootstrapServers, String topicName, int limit) {
+    public List<TopicMessageDto> getLatestMessages(ClusterEntity cluster, String topicName, int limit) {
         if (topicName == null || topicName.isBlank()) {
             throw new IllegalArgumentException("Topic adı boş olamaz");
         }
@@ -38,9 +39,9 @@ public class KafkaTopicMessageService {
             throw new IllegalArgumentException("Limit en az 1 olmalı");
         }
 
-        validateTopicExists(bootstrapServers, topicName);
+        validateTopicExists(cluster, topicName);
 
-        try (KafkaConsumer<byte[], byte[]> consumer = consumerFactory.create(bootstrapServers)) {
+        try (KafkaConsumer<byte[], byte[]> consumer = consumerFactory.create(cluster)) {
             List<PartitionInfo> partitionInfos = consumer.partitionsFor(topicName, Duration.ofSeconds(5));
             if (partitionInfos == null || partitionInfos.isEmpty()) {
                 throw new IllegalArgumentException("Topic bulunamadı: " + topicName);
@@ -76,14 +77,14 @@ public class KafkaTopicMessageService {
         } catch (IllegalArgumentException | ClusterConnectionException e) {
             throw e;
         } catch (Exception e) {
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw new ClusterConnectionException("Topic mesajları alınamadı: " + topicName + " — " + e.getMessage());
         }
     }
 
-    private void validateTopicExists(String bootstrapServers, String topicName) {
+    private void validateTopicExists(ClusterEntity cluster, String topicName) {
         try {
-            AdminClient adminClient = adminClientFactory.create(bootstrapServers);
+            AdminClient adminClient = adminClientFactory.create(cluster);
             adminClient.describeTopics(List.of(topicName)).allTopicNames().get(5, TimeUnit.SECONDS);
         } catch (ExecutionException e) {
             if (e.getCause() != null
@@ -91,12 +92,12 @@ public class KafkaTopicMessageService {
                 throw new IllegalArgumentException("Topic bulunamadı: " + topicName);
             }
 
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw new ClusterConnectionException("Topic mesajları alınamadı: " + topicName + " — " + e.getMessage());
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            adminClientFactory.invalidate(bootstrapServers);
+            adminClientFactory.invalidate(cluster.getId());
             throw new ClusterConnectionException("Topic mesajları alınamadı: " + topicName + " — " + e.getMessage());
         }
     }
