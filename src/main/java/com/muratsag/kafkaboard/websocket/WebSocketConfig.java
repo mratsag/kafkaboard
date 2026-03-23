@@ -45,7 +45,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                         "http://localhost:5173",
                         "https://*.onrender.com",
                         "https://*.vercel.app",
-                        "https://muratsag.online"
+                        "https://muratsag.online",
+                        "https://www.muratsag.online"
                 );
     }
 

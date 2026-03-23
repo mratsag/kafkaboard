@@ -19,7 +19,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://localhost:5173",
                         "https://*.onrender.com",
                         "https://*.vercel.app",
-                        "https://muratsag.online"
+                        "https://muratsag.online",
+                        "https://www.muratsag.online"
                 )
                 .allowedMethods("GET", "POST", "DELETE", "PUT")
                 .allowedHeaders("*")
