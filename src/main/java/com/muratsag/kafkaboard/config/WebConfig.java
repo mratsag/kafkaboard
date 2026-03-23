@@ -22,7 +22,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "https://muratsag.online"
                 )
                 .allowedMethods("GET", "POST", "DELETE", "PUT")
-                .allowedHeaders("*");
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 
     @Override

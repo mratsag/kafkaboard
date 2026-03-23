@@ -13,11 +13,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final RateLimitService rateLimitService;
+    private final ClientIpResolver clientIpResolver;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String path = request.getRequestURI();
-        String ipAddress = extractClientIp(request);
+        String ipAddress = clientIpResolver.resolve(request);
 
         ConsumptionProbe probe;
         long retryAfterSeconds;
@@ -39,14 +40,5 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         }
 
         return true;
-    }
-
-    private String extractClientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-
-        return request.getRemoteAddr();
     }
 }

@@ -52,6 +52,21 @@ public class RefreshTokenService {
     }
 
     @Transactional
+    public RefreshTokenEntity rotateRefreshToken(String token) {
+        RefreshTokenEntity existing = validateRefreshToken(token);
+        UserEntity user = existing.getUser();
+        refreshTokenRepository.delete(existing);
+
+        return refreshTokenRepository.save(
+                RefreshTokenEntity.builder()
+                        .user(user)
+                        .token(UUID.randomUUID().toString())
+                        .expiresAt(LocalDateTime.now().plus(Duration.ofMillis(refreshTokenExpiration)))
+                        .build()
+        );
+    }
+
+    @Transactional
     public void revokeRefreshToken(String token) {
         if (token == null || token.isBlank()) {
             return;

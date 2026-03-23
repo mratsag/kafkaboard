@@ -55,10 +55,11 @@ public class AuthService {
     }
 
     public AuthResponse refresh(RefreshTokenRequest request) {
-        RefreshTokenEntity refreshToken = refreshTokenService.validateRefreshToken(request.getRefreshToken());
+        RefreshTokenEntity refreshToken = refreshTokenService.rotateRefreshToken(request.getRefreshToken());
 
         return AuthResponse.builder()
                 .token(jwtService.generateToken(toAuthenticatedUser(refreshToken.getUser())))
+                .refreshToken(refreshToken.getToken())
                 .build();
     }
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muratsag.kafkaboard.auth.dto.LoginRequest;
 import com.muratsag.kafkaboard.auth.dto.RefreshTokenRequest;
 import com.muratsag.kafkaboard.auth.dto.RegisterRequest;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -42,38 +43,42 @@ class AuthRefreshIntegrationTest {
         loginRequest.setEmail(email);
         loginRequest.setPassword("Test1234!");
 
-        mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andReturn();
+
+        assertThat(result.getResponse().getCookie("kafkaboard_refresh_token")).isNotNull();
     }
 
     @Test
     void shouldRefreshAccessTokenAndRevokeOnLogout() throws Exception {
-        JsonNode authResponse = register("refresh-" + UUID.randomUUID() + "@test.com", "Test1234!");
-        String refreshToken = authResponse.get("refreshToken").asText();
-
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(refreshToken);
+        AuthResult authResponse = register("refresh-" + UUID.randomUUID() + "@test.com", "Test1234!");
+        String refreshToken = authResponse.refreshToken();
+        Cookie refreshCookie = authResponse.refreshCookie();
 
         mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshCookie)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty());
 
         mockMvc.perform(post("/api/auth/logout")
+                        .cookie(refreshCookie)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest())))
                 .andExpect(status().isOk());
 
         assertThat(refreshTokenRepository.findByToken(refreshToken)).isEmpty();
 
         mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshCookie)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest())))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -86,14 +91,14 @@ class AuthRefreshIntegrationTest {
         loginRequest.setEmail(email);
         loginRequest.setPassword("Test1234!");
 
-        JsonNode firstLogin = login(loginRequest);
-        JsonNode secondLogin = login(loginRequest);
+        AuthResult firstLogin = login(loginRequest);
+        AuthResult secondLogin = login(loginRequest);
 
-        assertThat(firstLogin.get("refreshToken").asText()).isNotEqualTo(secondLogin.get("refreshToken").asText());
+        assertThat(firstLogin.refreshToken()).isNotEqualTo(secondLogin.refreshToken());
         assertThat(refreshTokenRepository.count()).isGreaterThanOrEqualTo(3);
     }
 
-    private JsonNode register(String email, String password) throws Exception {
+    private AuthResult register(String email, String password) throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setEmail(email);
         request.setPassword(password);
@@ -103,21 +108,36 @@ class AuthRefreshIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andReturn();
 
-        return objectMapper.readTree(result.getResponse().getContentAsString());
+        return toAuthResult(result);
     }
 
-    private JsonNode login(LoginRequest request) throws Exception {
+    private AuthResult login(LoginRequest request) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andReturn();
 
-        return objectMapper.readTree(result.getResponse().getContentAsString());
+        return toAuthResult(result);
+    }
+
+    private AuthResult toAuthResult(MvcResult result) throws Exception {
+        JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+        Cookie refreshCookie = result.getResponse().getCookie("kafkaboard_refresh_token");
+        assertThat(refreshCookie).isNotNull();
+
+        return new AuthResult(
+                body.get("token").asText(),
+                refreshCookie.getValue(),
+                refreshCookie
+        );
+    }
+
+    private record AuthResult(String token, String refreshToken, Cookie refreshCookie) {
     }
 }

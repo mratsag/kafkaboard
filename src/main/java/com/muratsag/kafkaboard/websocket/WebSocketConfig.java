@@ -43,6 +43,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .addInterceptors(new JwtClusterHandshakeInterceptor())
                 .setAllowedOriginPatterns(
                         "http://localhost:5173",
+                        "https://*.onrender.com",
                         "https://*.vercel.app",
                         "https://muratsag.online"
                 );
