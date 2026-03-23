@@ -17,6 +17,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/api/**")
                 .allowedOriginPatterns(
                         "http://localhost:5173",
+                        "https://*.onrender.com",
                         "https://*.vercel.app",
                         "https://muratsag.online"
                 )
