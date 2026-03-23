@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: kafkaboard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kafkaboard}
+      POSTGRES_USER: ${POSTGRES_USER:-kafkaboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - kafkaboard-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kafkaboard} -d ${POSTGRES_DB:-kafkaboard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${KAFKABOARD_BACKEND_IMAGE:-kafkaboard-backend:latest}
+    container_name: kafkaboard-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-kafkaboard}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-kafkaboard}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-kafkaboard}
+      SPRING_FLYWAY_USER: ${POSTGRES_USER:-kafkaboard}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,::1}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    image: ${KAFKABOARD_UI_IMAGE:-kafkaboard-ui:latest}
+    container_name: kafkaboard-ui
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8090}:80"
+
+volumes:
+  kafkaboard-postgres-data:
